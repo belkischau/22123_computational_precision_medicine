@@ -8,31 +8,31 @@ date: "2024-07-23"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#### Course 22123: Computational precision medicine
-#### Day 2 practical: working with gene expression data in R
-#### By Lars Ronn Olsen
-#### 02/06/2023
-#### Technical University of Denmark
+###### Course 22123: Computational precision medicine
+###### Day 2 practical: working with gene expression data in R
+###### By Lars Ronn Olsen
+###### 02/06/2023
+###### Technical University of Denmark
 
-## Load necessary packages (you can back fill once you know what packages you will use)
+#### Load necessary packages (you can back fill once you know what packages you will use)
 ```{r}
 library(tidyverse)
 ```
 
 
-## Load expression data from Xena ("gene expression RNAseq" - "HTSeq - Counts")
+#### Load expression data from Xena ("gene expression RNAseq" - "HTSeq - Counts")
 ```{r}
 gbm_counts <- read.table("../00_raw_data/TCGA-GBM.htseq_counts.tsv", header = TRUE, row.names = 1)
 ```
 
 
-## Un-"log2" the data
+#### Un-"log2" the data
 ```{r}
 gbm_counts <- round((2^gbm_counts)-1, digits = 0)
 ```
 
 
-## Check out the distribution of the expression of a sample or two. What kind of distribution are you looking at?
+#### Check out the distribution of the expression of a sample or two. What kind of distribution are you looking at?
 ```{r}
 ggplot(data = gbm_counts, 
        mapping = aes(x = TCGA.26.5135.01A)) + 
@@ -41,13 +41,13 @@ ggplot(data = gbm_counts,
 ```
 
 
-## Load expression data from Xena ("gene expression RNAseq" - "HTSeq - FPKM") - you should be working with this from now on
+#### Load expression data from Xena ("gene expression RNAseq" - "HTSeq - FPKM") - you should be working with this from now on
 ```{r}
 gbm_fpkm <- read.table("../00_raw_data/TCGA-GBM.htseq_fpkm.tsv", header = TRUE, row.names = 1)
 ```
 
 
-## Check out the distribution of the expression of a sample or two. What changed? Why should we transform the raw counts?
+#### Check out the distribution of the expression of a sample or two. What changed? Why should we transform the raw counts?
 ```{r}
 ggplot(data = gbm_fpkm, 
        mapping = aes(x = TCGA.26.5135.01A)) + 
@@ -56,61 +56,61 @@ ggplot(data = gbm_fpkm,
 ```
 
 
-## Load phenotype data from Xena ("phenotype" - "phenotype")
+#### Load phenotype data from Xena ("phenotype" - "phenotype")
 ```{r}
 gbm_pheno <- read.table("../00_raw_data/TCGA-GBM.GDC_phenotype.tsv", header = TRUE, sep = "\t", quote="")
 ```
 
 
-## Take a closer look at the column called "sample_type.samples" and read here: https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
+#### Take a closer look at the column called "sample_type.samples" and read here: https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
 ```{r}
 table(gbm_pheno$sample_type.samples)
 ```
 
 
-## Take a closer look at the column called "batch_number"
+#### Take a closer look at the column called "batch_number"
 ```{r}
 table(gbm_pheno$batch_number)
 ```
 
 
-## Extract both those variables from the phenotype table along with the column called "submitter_id.samples".
+#### Extract both those variables from the phenotype table along with the column called "submitter_id.samples".
 ```{r}
 gbm_pheno <- gbm_pheno %>% 
               select(c("submitter_id.samples", "batch_number", "sample_type.samples"))
 ```
 
 
-## Do a little cleanup:
-## Rename sample type ids to match those in your expression table columns
+#### Do a little cleanup:
+#### Rename sample type ids to match those in your expression table columns
 ```{r}
 gbm_pheno <- gbm_pheno %>% 
   mutate(across("submitter_id.samples", str_replace, '-', '.'))
 ```
 
 
-## Subset the phenotype table to contain only the samples you have expression data for
+#### Subset the phenotype table to contain only the samples you have expression data for
 ```{r}
 gbm_pheno <- gbm_pheno %>% 
   filter(submitter_id.samples %in% colnames(gbm_fpkm))
 ```
 
 
-## Optional: save Rdata object for later use
+#### Optional: save Rdata object for later use
 ```{r}
 save(gbm_counts, gbm_fpkm, gbm_pheno, file = "../01_tidy_data/gbm.Rdata")
 ```
 
 
-## Calculate PCA on count matrix
-```{r}
+#### Calculate PCA on count matrix
+```{r, eval=FALSE}
 pca_count <- prcomp(t(gbm_counts), scale. = TRUE)
 ```
 
-## Why did this not work?
+#### Why did this not work?
 It is because some of the genes have zero variance. 
 
-## Solve the problem and try again
+#### Solve the problem and try again
 ```{r}
 gbm_counts <- gbm_counts %>% 
                 filter(rowSums(gbm_counts) > 0)
@@ -119,15 +119,15 @@ pca_count <- prcomp(t(gbm_counts), scale. = TRUE)
 ```
 
 
-## Check out how much variance is explained
+#### Check out how much variance is explained
 ```{r}
 summary(pca_count)
 ```
 
-## Is this more or less than you would expect?
+#### Is this more or less than you would expect?
 Less than expected. PC1 and PC2 only 0.108 and 0.05813 respectively. 
 
-## Plot the first two principal components of the PCA
+#### Plot the first two principal components of the PCA
 ```{r}
 library(broom)
 
@@ -139,7 +139,7 @@ pca_count %>%
 ```
 
 
-## Now try the same with FPKM transformed data
+#### Now try the same with FPKM transformed data
 ```{r}
 gbm_fpkm <- gbm_fpkm %>% 
               filter(rowSums(gbm_fpkm) > 0)
@@ -156,10 +156,10 @@ pca_fpkm %>%
 
 ```
 
-## Do you get the same results in terms of variance explained and visualization of PC1 and PC2? Why/why not? Which do you think is better to use?
+#### Do you get the same results in terms of variance explained and visualization of PC1 and PC2? Why/why not? Which do you think is better to use?
 No. 
 
-## Plot PCA of FPKM and color by batch
+#### Plot PCA of FPKM and color by batch
 ```{r}
 pca_fpkm %>% 
   augment(t(gbm_fpkm)) %>% 
@@ -170,10 +170,10 @@ pca_fpkm %>%
 ```
 
 
-## Do you anticipate batch effects in this dataset?
+#### Do you anticipate batch effects in this dataset?
 No
 
-## Plot PCA and color by sample type
+#### Plot PCA and color by sample type
 ```{r}
 pca_fpkm %>% 
   augment(t(gbm_fpkm)) %>% 
@@ -182,10 +182,10 @@ pca_fpkm %>%
   geom_point() +
   ggtitle("PC1 vs PC2 on FPKM colored by sample type")
 ```
-## How does this look?
+#### How does this look?
 Solid tissue normal is clearly distiguished from primary tumor and recurrent tumor. 
 
-## Make a heatmap of the genes in the list "diff_genes.txt" (https://teaching.healthtech.dtu.dk/22123/diff_genes.txt)
+#### Make a heatmap of the genes in the list "diff_genes.txt" (https://teaching.healthtech.dtu.dk/22123/diff_genes.txt)
 ```{r}
 diff_genes <-read.table(url("https://teaching.healthtech.dtu.dk/22123/diff_genes.txt"))
 
@@ -197,14 +197,14 @@ heatmap(as.matrix(selected_fpkm), scale = "row", Colv = NA, Rowv = NA)
 ```
 
 
-## Do the clusters in the dendrogram correspond to subtypes or batches?
+#### Do the clusters in the dendrogram correspond to subtypes or batches?
 ```{r}
 heatmap(as.matrix(selected_fpkm), scale = "row")
 ```
 
 
-## Calculate the correlation between genes and visualize a low, medium, and high correlation pair in three separate scatter plots
-## Calculate the correlation between the genes "ENSG00000249568.1" and "ENSG00000249186.1"
+#### Calculate the correlation between genes and visualize a low, medium, and high correlation pair in three separate scatter plots
+#### Calculate the correlation between the genes "ENSG00000249568.1" and "ENSG00000249186.1"
 ```{r}
 t(gbm_fpkm) %>% 
   ggplot(mapping = aes(x = ENSG00000249568.1, y = ENSG00000249186.1)) + 
@@ -214,7 +214,7 @@ t(gbm_fpkm) %>%
 ```
 
 
-## Visualize the expression of the gene "ENSG00000267112.1 in primary vs normal samples using boxplots
+#### Visualize the expression of the gene "ENSG00000267112.1 in primary vs normal samples using boxplots
 ```{r}
 gbm_fpkm %>% 
   filter(rownames(gbm_fpkm) == "ENSG00000267112.1") %>% 
@@ -230,10 +230,6 @@ gbm_fpkm %>%
   
 ```
 
-```{r}
-gbm_fpkm %>% 
-  filter(rownames(gbm_fpkm) == "ENSG00000267112.1") 
-```
 
 
 
@@ -253,28 +249,3 @@ gbm_fpkm %>%
 
 
 
-
-
-
-
-
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
