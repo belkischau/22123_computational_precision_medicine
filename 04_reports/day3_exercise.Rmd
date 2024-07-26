@@ -1,0 +1,111 @@
+---
+title: "day3_exercise"
+author: "Belkis"
+date: "2024-07-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###### Course 22123: Computational precision medicine
+###### Day 3 practical: clustering and feature selection for molecular subtyping
+###### By Lars Ronn Olsen
+###### 06/06/2023
+###### Technical University of Denmark
+
+#### Load necessary packages
+```{r}
+library(tidyverse)
+library(e1071)
+library(class)
+library(GSVA)
+```
+
+
+#### Load exercise data
+```{r}
+load("../00_raw_data/Day3_data.Rdata")
+```
+CIT_full contains microarray expression of all genes for all samples
+CIT_subtyping contains microarray expression of 245 subtyping genes for all samples
+CIT_class contains the subtypes for all 355 samples
+CIT_genesets contains genes upregulated in each subtype
+Bordet_RNA_tpm contains RNA seq expression of all genes for a cohort 
+
+
+#### Check out the distribution of the expression of a sample or two (or all)
+```{r}
+CIT_full %>% 
+  ggplot(mapping = aes(x = CIT_DSOA_440)) +
+  geom_density() + 
+  ggtitle("Distribution of gene expression of sample CIT_DSOA_440")
+```
+
+
+#### Does it look different from RNA-seq? How? Why? Do you anticipate any problems comparing these data with RNA-seq data?
+They look totally different. 
+
+#### Do a leave-one-out of a distance to centroid, a kNN, OR a ssGSEA classification of CIT (or all three if you are feeling confident)
+```{r}
+# leave-one-out of a distance to centroid 
+# make empty prediction vector
+pred_vector <- c()
+# loop over samples (columns)
+for(i in 1:ncol(CIT_subtyping)) {
+  # make a training matrix consisting of all samples but the one you leave out
+  training <- CIT_subtyping[,-i]
+  # remove that samples class from the class vector
+  training_classes <- CIT_classes[-i]
+  # make a test vector consisting of only that sample
+  test <- CIT_subtyping[,i]
+  # get the class of that sample
+  test_class <- CIT_classes[i]
+  
+  # make an empty centroid matrix
+  centroids <- NULL
+  # loop over each of the six classes
+  for (class in unique(CIT_classes)) {
+    # for each of these classes, subset the training matrix to samples belonging to that class, and calculate the mean expression of each probe in the class
+    class_centroid <- rowMeans(training[,training_classes==class])
+    # add the mean vector to the centroids matrix
+    centroids <- cbind(centroids, class_centroid)
+  }
+  # add colnames to the centroid matrix
+  colnames(centroids) <- unique(CIT_classes)
+  # calculate the distance of the test sample to the centroids
+  d <- as.matrix(dist(t(cbind(centroids, test))))
+  # assign the class of the closest centroid
+  class_pred <- names(which.min(d[1:6,7]))
+  # check if you got it right and make a logical vector
+  pred_vector <- c(pred_vector, test_class==class_pred)
+}
+# check how many of the cases you got it right
+table(pred_vector)
+```
+
+
+#### KNN
+```{r}
+# KNN
+k <- 5
+
+# make empty prediction vector
+knn_pred <- c()
+
+# loop over samples (columns)
+for(i in 1:ncol(CIT_subtyping)) {
+  knn_pred <- c(knn_pred, as.vector(knn(train = t(CIT_subtyping[, -i]), 
+                                        test = CIT_subtyping[, i], 
+                                        cl = as.factor(CIT_classes[-i]), 
+                                        k = k)))
+}
+
+table(knn_pred==CIT_classes)
+```
+
+
+
+
